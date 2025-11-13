@@ -4,7 +4,7 @@ import pandas as pd
 import pickle
 
 # Load the trained model
-model = pickle.load('linear_regression_model..pkl') # Changed model filename and loading method
+model = pickle.load('linear_regression_model.pkl') # Changed model filename and loading method
 
 # Streamlit app title
 st.title('Prediksi Tagihan Listrik Jakarta')
