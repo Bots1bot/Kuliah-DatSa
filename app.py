@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import pickle
 import os
-!pip install scikit-learn
+
 # Judul aplikasi
 st.title("Prediksi Tagihan Listrik Jakarta")
 st.write("Aplikasi untuk memprediksi jumlah tagihan listrik berdasarkan parameter yang diberikan.")
@@ -52,14 +52,8 @@ training_columns_and_dtypes = {
 }
 
 # Inisialisasi dataframe kosong sesuai tipe
-default_row = {}
-for col, dtype in training_columns_and_dtypes.items():
-    if dtype == "bool":
-        default_row[col] = False
-    elif "int" in dtype:
-        default_row[col] = 0
-    else:
-        default_row[col] = 0.0
+default_row = {col: (False if dtype == "bool" else 0.0 if "float" in dtype else 0) 
+               for col, dtype in training_columns_and_dtypes.items()}
 
 final_input_df = pd.DataFrame([default_row]).astype(training_columns_and_dtypes)
 
@@ -100,9 +94,9 @@ if st.sidebar.button("Prediksi Tagihan"):
         st.write(f"Tagihan Diprediksi: Rp {prediction[0]:,.2f}")
     except FileNotFoundError as fnf:
         st.error(str(fnf))
-    except ModuleNotFoundError as mnf:
-        st.error("Modul pendukung model belum terinstal. Pastikan scikit-learn sudah diinstal.")
-        st.info("Jalankan perintah: pip install scikit-learn")
+    except ModuleNotFoundError:
+        st.error("Modul 'scikit-learn' belum terinstal.")
+        st.info("Silakan jalankan di terminal: pip install scikit-learn")
     except Exception as e:
-        st.error("Terjadi kesalahan saat melakukan prediksi. Detail di bawah:")
+        st.error("Terjadi kesalahan saat melakukan prediksi.")
         st.exception(e)
