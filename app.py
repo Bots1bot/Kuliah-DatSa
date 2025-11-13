@@ -17,7 +17,8 @@ def user_input_features():
     ac_hours_per_day = st.sidebar.slider("Jam AC per Hari", 0.0, 10.0, 5.0)
     family_size = st.sidebar.slider("Jumlah Anggota Keluarga", 2, 6, 4)
 
-    month_name = st.sidebar.selectbox("Bulan", 
+    month_name = st.sidebar.selectbox(
+        "Bulan", 
         ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     )
@@ -80,7 +81,7 @@ if selected_tariff_col in final_input_df.columns:
 # Pastikan urutan kolom sama seperti training
 final_input_df = final_input_df[list(training_columns_and_dtypes.keys())]
 
-# Fungsi untuk load model
+# Fungsi untuk load model dengan cache
 @st.cache_resource
 def load_model(path: str):
     if not os.path.exists(path):
@@ -99,6 +100,9 @@ if st.sidebar.button("Prediksi Tagihan"):
         st.write(f"Tagihan Diprediksi: Rp {prediction[0]:,.2f}")
     except FileNotFoundError as fnf:
         st.error(str(fnf))
+    except ModuleNotFoundError as mnf:
+        st.error("Modul pendukung model belum terinstal. Pastikan scikit-learn sudah diinstal.")
+        st.info("Jalankan perintah: pip install scikit-learn")
     except Exception as e:
         st.error("Terjadi kesalahan saat melakukan prediksi. Detail di bawah:")
         st.exception(e)
