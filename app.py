@@ -1,16 +1,11 @@
-
 import streamlit as st
 import pandas as pd
 import pickle
+import os
 
-# Load the trained model
-model = pickle.load('linear_regression_model.pkl') # Changed model filename and loading method
-
-# Streamlit app title
 st.title('Prediksi Tagihan Listrik Jakarta')
 st.write('Aplikasi untuk memprediksi jumlah tagihan listrik berdasarkan parameter yang diberikan.')
 
-# Sidebar for user inputs
 st.sidebar.header('Input Parameter')
 
 def user_input_features():
@@ -30,16 +25,13 @@ def user_input_features():
         'month_name': month_name,
         'tariff_class': tariff_class
     }
-    features = pd.DataFrame(data, index=[0])
-    return features
+    return pd.DataFrame(data, index=[0])
 
 df_input = user_input_features()
-
 st.subheader('Parameter Input Pengguna:')
 st.write(df_input)
 
-# Define the exact columns and their dtypes expected by the model during training
-# This list ensures correct order and includes all dummy variables used during training
+# Kolom dan dtype yang diharapkan model saat training
 training_columns_and_dtypes = {
     'kwh': 'float64',
     'ac_units': 'int64',
@@ -52,39 +44,54 @@ training_columns_and_dtypes = {
     'tariff_class_R2': 'bool', 'tariff_class_R3': 'bool'
 }
 
-# Create an empty DataFrame with the correct columns and dtypes
-final_input_df = pd.DataFrame(columns=training_columns_and_dtypes.keys())
-for col, dtype in training_columns_and_dtypes.items():
-    final_input_df[col] = final_input_df[col].astype(dtype)
-
-# Add a single row of data, initially all zeros/False
-final_input_df.loc[0] = 0
+# Buat satu baris default dengan tipe sesuai (bool False, numeric 0/0.0)
+default_row = {}
 for col, dtype in training_columns_and_dtypes.items():
     if dtype == 'bool':
-        final_input_df.loc[0, col] = False
+        default_row[col] = False
+    elif 'int' in dtype:
+        default_row[col] = 0
+    else:
+        default_row[col] = 0.0
 
-# Populate numerical features
-final_input_df.loc[0, 'kwh'] = df_input['kwh'][0]
-final_input_df.loc[0, 'ac_units'] = df_input['ac_units'][0]
-final_input_df.loc[0, 'ac_hours_per_day'] = df_input['ac_hours_per_day'][0]
-final_input_df.loc[0, 'family_size'] = df_input['family_size'][0]
+final_input_df = pd.DataFrame([default_row]).astype(training_columns_and_dtypes)
 
-# Populate one-hot encoded categorical features
-selected_month_col = f"month_name_{df_input['month_name'][0]}"
+# Isi fitur numerik dari input user
+final_input_df.loc[0, 'kwh'] = float(df_input.loc[0, 'kwh'])
+final_input_df.loc[0, 'ac_units'] = int(df_input.loc[0, 'ac_units'])
+final_input_df.loc[0, 'ac_hours_per_day'] = float(df_input.loc[0, 'ac_hours_per_day'])
+final_input_df.loc[0, 'family_size'] = int(df_input.loc[0, 'family_size'])
+
+# Set one-hot untuk month dan tariff (jika kolom tersedia — model mungkin menggunakan baseline)
+selected_month_col = f"month_name_{df_input.loc[0, 'month_name']}"
 if selected_month_col in final_input_df.columns:
     final_input_df.loc[0, selected_month_col] = True
 
-selected_tariff_col = f"tariff_class_{df_input['tariff_class'][0]}"
+selected_tariff_col = f"tariff_class_{df_input.loc[0, 'tariff_class']}"
 if selected_tariff_col in final_input_df.columns:
     final_input_df.loc[0, selected_tariff_col] = True
 
-# Make prediction
+# Pastikan urutan kolom sesuai definisi training (opsional tapi aman)
+final_input_df = final_input_df[list(training_columns_and_dtypes.keys())]
+
+# Fungsi load model yang benar (gunakan with open(..., 'rb'))
+@st.cache_resource
+def load_model(path: str):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Model file tidak ditemukan: {path}")
+    with open(path, 'rb') as f:
+        return pickle.load(f)
+
+model_path = 'linear_regression_model.pkl'
+
 if st.sidebar.button('Prediksi Tagihan'):
     try:
-        prediction = model.predict(final_input_df) # Use the new DataFrame name
+        model = load_model(model_path)
+        prediction = model.predict(final_input_df)
         st.subheader('Hasil Prediksi Tagihan Listrik:')
         st.write(f"Tagihan Diprediksi: Rp {prediction[0]:,.2f}")
+    except FileNotFoundError as fnf:
+        st.error(str(fnf))
     except Exception as e:
-        st.error(f"Terjadi kesalahan saat melakukan prediksi: {e}")
-        st.exception(e) # Show full traceback
-
+        st.error("Terjadi kesalahan saat melakukan prediksi. Detail di bawah:")
+        st.exception(e)
