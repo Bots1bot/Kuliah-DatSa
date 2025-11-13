@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import pickle
 import os
-
+!pip install scikit-learn
 # Judul aplikasi
 st.title("Prediksi Tagihan Listrik Jakarta")
 st.write("Aplikasi untuk memprediksi jumlah tagihan listrik berdasarkan parameter yang diberikan.")
